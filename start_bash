@@ -9,43 +9,6 @@ if [ -z "$CLIENT_NAME" ]; then
     exit 1
 fi
 
-# Путь к базовому файлу конфигурации клиента
-BASE_CONFIG_FILE=/etc/openvpn/openvpn-client-config.ovpn
-
-# Создание базового файла конфигурации, если его нет
-if [ ! -f "$BASE_CONFIG_FILE" ]; then
-    echo "Creating base client configuration file at $BASE_CONFIG_FILE"
-    cat <<EOF > $BASE_CONFIG_FILE
-client
-dev tun
-proto udp
-remote your-server-ip 1194
-resolv-retry infinite
-nobind
-persist-key
-persist-tun
-remote-cert-tls server
-cipher AES-256-CBC
-auth SHA256
-compress lz4-v2
-verb 3
-<ca>
-# Insert CA certificate here
-</ca>
-<cert>
-# Insert client certificate here
-</cert>
-<key>
-# Insert client key here
-</key>
-key-direction 1
-<tls-auth>
-# Insert ta.key here
-</tls-auth>
-EOF
-    echo "Base client configuration file created."
-fi
-
 # Переходим в директорию easy-rsa
 cd /etc/openvpn/easy-rsa
 
@@ -57,10 +20,10 @@ echo -e "yes" | sudo ./easyrsa sign-req client $CLIENT_NAME
 
 # Создание конфигурационного файла для клиента
 CLIENT_CONFIG_FILE=/etc/openvpn/openvpn-client-config-$CLIENT_NAME.ovpn
-cp $BASE_CONFIG_FILE $CLIENT_CONFIG_FILE
+cp /etc/openvpn/openvpn-client-config.ovpn $CLIENT_CONFIG_FILE
 
 # Вставка сертификатов и ключей для клиента
-sed -i "s/your-server-ip/$(curl -4 ifconfig.co)/g" $CLIENT_CONFIG_FILE
+sed -i "s/client1/$CLIENT_NAME/g" $CLIENT_CONFIG_FILE
 sed -i "/<cert>/,/<\/cert>/d" $CLIENT_CONFIG_FILE
 echo "<cert>" >> $CLIENT_CONFIG_FILE
 cat /etc/openvpn/easy-rsa/pki/issued/$CLIENT_NAME.crt >> $CLIENT_CONFIG_FILE
