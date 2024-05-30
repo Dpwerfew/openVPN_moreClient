@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Проверка наличия аргумента с именем пользователя
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <client_name>"
+    exit 1
+fi
+
+# Имя пользователя, переданное в качестве аргумента
+CLIENT_NAME=$1
+
+# Переход в директорию easy-rsa
+cd /etc/openvpn/easy-rsa
+
+# Генерация ключа и запроса на сертификат для клиента
+echo -e "Name_$CLIENT_NAME\n\n\n\n\n\n\n\n\n\n" | sudo ./easyrsa gen-req $CLIENT_NAME nopass
+
+# Подписание сертификата для клиента
+echo -e "yes" | sudo ./easyrsa sign-req client $CLIENT_NAME
+
+# Создание конфигурационного файла для клиента
+CLIENT_CONFIG_FILE=/etc/openvpn/openvpn-client-config-$CLIENT_NAME.ovpn
+cp /etc/openvpn/openvpn-client-config.ovpn $CLIENT_CONFIG_FILE
+
+# Вставка сертификатов и ключей для клиента
+sed -i "s/client1/$CLIENT_NAME/g" $CLIENT_CONFIG_FILE
+sed -i "/<cert>/,/<\/cert>/d" $CLIENT_CONFIG_FILE
+echo "<cert>" >> $CLIENT_CONFIG_FILE
+cat /etc/openvpn/easy-rsa/pki/issued/$CLIENT_NAME.crt >> $CLIENT_CONFIG_FILE
+echo "</cert>" >> $CLIENT_CONFIG_FILE
+
+sed -i "/<key>/,/<\/key>/d" $CLIENT_CONFIG_FILE
+echo "<key>" >> $CLIENT_CONFIG_FILE
+cat /etc/openvpn/easy-rsa/pki/private/$CLIENT_NAME.key >> $CLIENT_CONFIG_FILE
+echo "</key>" >> $CLIENT_CONFIG_FILE
+
+# Перемещение конфигурационного файла для клиента в веб-директорию
+sudo mv $CLIENT_CONFIG_FILE /var/www/html/
+
+# Изменение прав доступа для конфигурационного файла клиента
+sudo chmod 444 /var/www/html/openvpn-client-config-$CLIENT_NAME.ovpn
+
+# Вывод URL для загрузки конфигурационного файла
+server_ip=$(curl -4 ifconfig.co)
+echo -e "Your client config file is available at the following URL: http://$server_ip/openvpn-client-config-$CLIENT_NAME.ovpn"
