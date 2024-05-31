@@ -45,11 +45,21 @@ sudo cp /etc/openvpn/easy-rsa/pki/issued/server.crt /etc/openvpn/certs/
 sudo cp /etc/openvpn/easy-rsa/pki/private/server.key /etc/openvpn/certs/
 
 # Check the presence of required files in the /etc/openvpn/certs/ directory
-file_count=$(ls -1 /etc/openvpn/certs/ | wc -l)
-if [ "$file_count" -eq 5 ]; then
-    echo "All required files are present in the /etc/openvpn/certs/ directory."
-else
+REQUIRED_FILES=( "ca.crt" "server.crt" "server.key" "dh2048.pem" "ta.key" )
+ALL_FILES_PRESENT=true
+
+for FILE in "${REQUIRED_FILES[@]}"; do
+    if [ ! -f "/etc/openvpn/certs/$FILE" ]; then
+        echo "Error: $FILE is missing in the /etc/openvpn/certs/ directory."
+        ALL_FILES_PRESENT=false
+    fi
+done
+
+if [ "$ALL_FILES_PRESENT" = false ]; then
     echo "Error: Not all required files are present in the /etc/openvpn/certs/ directory."
+    exit 1
+else
+    echo "All required files are present in the /etc/openvpn/certs/ directory."
 fi
 
 # Navigate to the /etc/openvpn directory
