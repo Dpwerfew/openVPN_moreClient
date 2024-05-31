@@ -106,7 +106,7 @@ add_user() {
   local USERNAME=$1
   cd /etc/openvpn/easy-rsa
   sudo ./easyrsa gen-req $USERNAME nopass
-  sudo ./easyrsa sign-req client $USERNAME
+  echo -e "yes" | sudo ./easyrsa sign-req client $USERNAME
 
   # Create client config file with embedded certificates and keys
   cat <<EOF > /var/www/html/$USERNAME.ovpn
