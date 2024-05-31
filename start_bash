@@ -125,6 +125,7 @@ port 1194
 dev tun
 
 # OpenVPN protocol, matching the server
+;proto tcp
 proto udp
 
 # Hostname, IP, and server port
@@ -169,7 +170,6 @@ cipher AES-256-CBC
 # Verbosity level
 verb 3
 
-# Certificates
 <ca>
 $(cat /etc/openvpn/certs/ca.crt)
 </ca>
