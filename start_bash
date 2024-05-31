@@ -104,12 +104,18 @@ systemctl enable openvpn-server-routing
 # Function to add a new OpenVPN user
 add_user() {
   local USERNAME=$1
+  local CONFIG_FILE="/var/www/html/$USERNAME.ovpn"
+
+  if [ -f "$CONFIG_FILE" ]; then
+    echo "Configuration file for $USERNAME already exists. Overwriting."
+  fi
+
   cd /etc/openvpn/easy-rsa
   sudo ./easyrsa gen-req $USERNAME nopass
   echo -e "yes" | sudo ./easyrsa sign-req client $USERNAME
 
   # Create client config file with embedded certificates and keys
-  cat <<EOF > /var/www/html/$USERNAME.ovpn
+  cat <<EOF > $CONFIG_FILE
 # Role
 client
 
@@ -165,7 +171,7 @@ $(cat /etc/openvpn/certs/ta.key)
 </tls-auth>
 EOF
 
-  echo "User $USERNAME added successfully. Configuration file: /var/www/html/$USERNAME.ovpn"
+  echo "User $USERNAME added successfully. Configuration file: $CONFIG_FILE"
 }
 
 # Add new users
