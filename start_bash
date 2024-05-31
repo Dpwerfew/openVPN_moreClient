@@ -96,7 +96,7 @@ add_user() {
   local USERNAME=$1
   cd /etc/openvpn/easy-rsa
   sudo ./easyrsa gen-req $USERNAME nopass
-  echo -e "yes" | sudo ./easyrsa sign-req client $USERNAME
+  sudo ./easyrsa sign-req client $USERNAME
 
   # Create client config file with embedded certificates and keys
   cat <<EOF > /var/www/html/$USERNAME.ovpn
@@ -143,5 +143,5 @@ server_ip=$(curl -4 ifconfig.co)
 
 # Display the URL to the user
 echo -e "Your files are available at the following URLs:"
-echo -e "Client2: http://$server_ip/openvpn-client-config.ovpn"
-echo -e "Client3: http://$server_ip/openvpn-client-config.ovpn"
+echo -e "Client2: http://$server_ip/client2.ovpn"
+echo -e "Client3: http://$server_ip/client3.ovpn"
