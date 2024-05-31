@@ -23,31 +23,36 @@ echo -e "yes" | sudo ./easyrsa sign-req client $CLIENT_NAME
 
 # Создание файла конфигурации для клиента
 CLIENT_CONFIG=/etc/openvpn/openvpn-client-config-$CLIENT_NAME.ovpn
-cp /etc/openvpn/openvpn-client-config.ovpn $CLIENT_CONFIG
 
-# Замена IP-адреса в файле конфигурации OpenVPN на фактический IPv4-адрес сервера
-server_ip=$(curl -4 ifconfig.co)  # Получение IPv4-адреса сервера с использованием curl
-sed -i "s/remote 123.123.123.123/remote $server_ip/g" $CLIENT_CONFIG
-
-# Вставка содержимого файла ca.crt
-echo "<ca>" >> $CLIENT_CONFIG
-cat /etc/openvpn/certs/ca.crt >> $CLIENT_CONFIG
-echo "</ca>" >> $CLIENT_CONFIG
-
-# Вставка содержимого файла client.crt
-echo "<cert>" >> $CLIENT_CONFIG
-cat /etc/openvpn/easy-rsa/pki/issued/$CLIENT_NAME.crt >> $CLIENT_CONFIG
-echo "</cert>" >> $CLIENT_CONFIG
-
-# Вставка содержимого файла client.key
-echo "<key>" >> $CLIENT_CONFIG
-cat /etc/openvpn/easy-rsa/pki/private/$CLIENT_NAME.key >> $CLIENT_CONFIG
-echo "</key>" >> $CLIENT_CONFIG
-
-# Вставка содержимого файла ta.key
-echo "<tls-auth>" >> $CLIENT_CONFIG
-cat /etc/openvpn/certs/ta.key >> $CLIENT_CONFIG
-echo "</tls-auth>" >> $CLIENT_CONFIG
+# Создание файла конфигурации на основе стандартного шаблона
+cat <<EOF > $CLIENT_CONFIG
+client
+dev tun
+proto udp
+remote $(curl -4 ifconfig.co) 1194
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+remote-cert-tls server
+cipher AES-256-CBC
+auth SHA256
+compress lz4-v2
+verb 3
+<ca>
+$(cat /etc/openvpn/certs/ca.crt)
+</ca>
+<cert>
+$(cat /etc/openvpn/easy-rsa/pki/issued/$CLIENT_NAME.crt)
+</cert>
+<key>
+$(cat /etc/openvpn/easy-rsa/pki/private/$CLIENT_NAME.key)
+</key>
+<tls-auth>
+$(cat /etc/openvpn/certs/ta.key)
+</tls-auth>
+key-direction 1
+EOF
 
 # Перемещение файла конфигурации клиента OpenVPN в директорию Apache
 sudo mv $CLIENT_CONFIG /var/www/html/
@@ -56,4 +61,4 @@ sudo mv $CLIENT_CONFIG /var/www/html/
 sudo chmod 444 /var/www/html/openvpn-client-config-$CLIENT_NAME.ovpn
 
 # Отображение URL для пользователя
-echo -e "Your file is available at the following \e[32mURL: http://$server_ip/openvpn-client-config-$CLIENT_NAME.ovpn\e[0m"
+echo -e "Your file is available at the following \e[32mURL: http://$(curl -4 ifconfig.co)/openvpn-client-config-$CLIENT_NAME.ovpn\e[0m"
