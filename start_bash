@@ -105,6 +105,7 @@ systemctl enable openvpn-server-routing
 add_user() {
   local USERNAME=$1
   local CONFIG_FILE="/var/www/html/$USERNAME.ovpn"
+  local SERVER_IP=$(curl -4 ifconfig.co)
 
   cd /etc/openvpn/easy-rsa
   sudo ./easyrsa gen-req $USERNAME nopass
@@ -116,7 +117,7 @@ add_user() {
 client
 
 # OpenVPN server IP
-remote $(curl -4 ifconfig.co)
+remote $SERVER_IP
 
 # OpenVPN server port, matching server configuration
 port 1194
