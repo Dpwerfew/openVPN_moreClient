@@ -20,7 +20,7 @@ sudo ./easyrsa init-pki
 sudo EASYRSA_BATCH=1 ./easyrsa build-ca nopass
 
 # Создание директорий для сертификатов и ключей
-mkdir /etc/openvpn/certs/
+mkdir -p /etc/openvpn/certs/
 
 # Копирование CA сертификата
 cp pki/ca.crt /etc/openvpn/certs/
@@ -47,10 +47,31 @@ openssl dhparam -out /etc/openvpn/certs/dh2048.pem 2048
 openvpn --genkey --secret /etc/openvpn/certs/ta.key
 
 # Проверка наличия файлов
-if [ "$(ls -1 /etc/openvpn/certs/ | wc -l)" -eq 5 ]; then
+REQUIRED_FILES=(
+    "/etc/openvpn/certs/ca.crt"
+    "/etc/openvpn/certs/server.crt"
+    "/etc/openvpn/certs/server.key"
+    "/etc/openvpn/certs/dh2048.pem"
+    "/etc/openvpn/certs/ta.key"
+    "/etc/openvpn/certs/$CLIENT_NAME.crt"
+    "/etc/openvpn/certs/$CLIENT_NAME.key"
+)
+
+MISSING_FILES=()
+for file in "${REQUIRED_FILES[@]}"; do
+    if [ ! -f "$file" ]; then
+        MISSING_FILES+=("$file")
+    fi
+done
+
+if [ ${#MISSING_FILES[@]} -eq 0 ]; then
     echo "Все необходимые файлы присутствуют в /etc/openvpn/certs/"
 else
     echo "Ошибка: Не все необходимые файлы присутствуют в /etc/openvpn/certs/"
+    echo "Отсутствующие файлы:"
+    for file in "${MISSING_FILES[@]}"; do
+        echo "  $file"
+    done
     exit 1
 fi
 
