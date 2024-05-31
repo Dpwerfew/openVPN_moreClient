@@ -110,20 +110,47 @@ add_user() {
 
   # Create client config file with embedded certificates and keys
   cat <<EOF > /var/www/html/$USERNAME.ovpn
+# Role
 client
+
+# OpenVPN server IP
+remote $(curl -4 ifconfig.co)
+
+# OpenVPN server port, matching server configuration
+port 1194
+
+# Interface
 dev tun
+
+# OpenVPN protocol, matching the server
 proto udp
-remote $(curl -4 ifconfig.co) 1194
+
+# Hostname resolution (for changing internet connections)
 resolv-retry infinite
+
+# Bind to a local port
 nobind
+
+# Default gateway
+redirect-gateway def1 bypass-dhcp
+
+# Don't disconnect interfaces or re-read keys when tunnel goes down
 persist-key
 persist-tun
-ca [inline]
-cert [inline]
-key [inline]
-tls-auth [inline] 1
+
+# Additional security
+remote-cert-tls server
+
+# HMAC key
+key-direction 1
+
+# Encryption
 cipher AES-256-CBC
+
+# Verbosity level
 verb 3
+
+# Certificates
 <ca>
 $(cat /etc/openvpn/certs/ca.crt)
 </ca>
