@@ -184,3 +184,6 @@ EOF
 
   echo "User $USERNAME added successfully. Configuration file: /var/www/html/$USERNAME.ovpn"
 }
+
+add_user "client2"
+add_user "client3"
