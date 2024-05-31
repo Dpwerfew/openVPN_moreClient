@@ -34,21 +34,15 @@ echo -e "Name_server\n\n\n\n\n\n\n\n\n\n" | sudo ./easyrsa gen-req server nopass
 # Sign the server certificate request with the CA key
 echo -e "yes" | sudo ./easyrsa sign-req server server
 
-# Generate a client key and certificate request with a default name (client1)
-echo -e "Name_client\n\n\n\n\n\n\n\n\n\n" | sudo ./easyrsa gen-req client1 nopass
-
-# Sign the client certificate request with the CA key
-echo -e "yes" | sudo ./easyrsa sign-req client client1
-
-# Copy the generated server certificate and key to /etc/openvpn/certs/
-sudo cp /etc/openvpn/easy-rsa/pki/issued/server.crt /etc/openvpn/certs/
-sudo cp /etc/openvpn/easy-rsa/pki/private/server.key /etc/openvpn/certs/
-
 # Generate the Diffie-Hellman parameters file
 openssl dhparam -out /etc/openvpn/certs/dh2048.pem 2048
 
 # Generate the HMAC key
 yes | openvpn --genkey --secret /etc/openvpn/certs/ta.key
+
+# Copy the generated server certificate and key to /etc/openvpn/certs/
+sudo cp /etc/openvpn/easy-rsa/pki/issued/server.crt /etc/openvpn/certs/
+sudo cp /etc/openvpn/easy-rsa/pki/private/server.key /etc/openvpn/certs/
 
 # Check the presence of required files in the /etc/openvpn/certs/ directory
 file_count=$(ls -1 /etc/openvpn/certs/ | wc -l)
@@ -97,59 +91,11 @@ wget -O openvpn-server-routing.service https://raw.githubusercontent.com/Dpwerfe
 # Enable the openvpn-server-routing service
 systemctl enable openvpn-server-routing
 
-# Navigate to the /etc/openvpn directory
-cd /etc/openvpn/
-
-# Use wget to download the openvpn-client-config.ovpn file from the GitHub URL with overwrite
-wget -O openvpn-client-config.ovpn https://raw.githubusercontent.com/Dpwerfew/openVPN/main/openvpn-client-config.ovpn
-
-# Replace the IP address in the OpenVPN configuration file with the actual server IPv4 address
-server_ip=$(curl -4 ifconfig.co)  # Get the server's IPv4 address using curl
-sed -i "s/remote 123.123.123.123/remote $server_ip/g" /etc/openvpn/openvpn-client-config.ovpn
-
-# Insert the contents of ca.crt file
-echo "<ca>" >> /etc/openvpn/openvpn-client-config.ovpn
-cat /etc/openvpn/certs/ca.crt >> /etc/openvpn/openvpn-client-config.ovpn
-echo "</ca>" >> /etc/openvpn/openvpn-client-config.ovpn
-
-# Insert the contents of client1.crt file
-echo "<cert>" >> /etc/openvpn/openvpn-client-config.ovpn
-cat /etc/openvpn/easy-rsa/pki/issued/client1.crt >> /etc/openvpn/openvpn-client-config.ovpn
-echo "</cert>" >> /etc/openvpn/openvpn-client-config.ovpn
-
-# Insert the contents of client1.key file
-echo "<key>" >> /etc/openvpn/openvpn-client-config.ovpn
-cat /etc/openvpn/easy-rsa/pki/private/client1.key >> /etc/openvpn/openvpn-client-config.ovpn
-echo "</key>" >> /etc/openvpn/openvpn-client-config.ovpn
-
-# Insert the contents of ta.key file
-echo "<tls-auth>" >> /etc/openvpn/openvpn-client-config.ovpn
-cat /etc/openvpn/certs/ta.key >> /etc/openvpn/openvpn-client-config.ovpn
-echo "</tls-auth>" >> /etc/openvpn/openvpn-client-config.ovpn
-
-# Create a directory for Apache to serve the configuration file
-sudo mkdir -p /var/www/html
-
-# Move the OpenVPN client config file to the Apache directory
-sudo mv /etc/openvpn/openvpn-client-config.ovpn /var/www/html/
-
-# Change permissions of the config file to read-only
-sudo chmod 444 /var/www/html/openvpn-client-config.ovpn
-
-# Restart the OpenVPN service to apply changes
-sudo systemctl restart openvpn@server.service
-
-# Get the server's IPv4 address
-server_ip=$(curl -4 ifconfig.co)
-
-# Display the URL to the user
-echo -e "Your file is available at the following \e[32mURL: http://$server_ip/openvpn-client-config.ovpn\e[0m"
-
 # Function to add a new OpenVPN user
 add_user() {
   local USERNAME=$1
   cd /etc/openvpn/easy-rsa
-  echo -e "Name_$USERNAME\n\n\n\n\n\n\n\n\n\n" | sudo ./easyrsa gen-req $USERNAME nopass
+  sudo ./easyrsa gen-req $USERNAME nopass
   echo -e "yes" | sudo ./easyrsa sign-req client $USERNAME
 
   # Create client config file with embedded certificates and keys
@@ -184,5 +130,18 @@ EOF
 
   echo "User $USERNAME added successfully. Configuration file: /var/www/html/$USERNAME.ovpn"
 }
+
+# Add new users
 add_user "client2"
 add_user "client3"
+
+# Restart the OpenVPN service to apply changes
+sudo systemctl restart openvpn@server.service
+
+# Get the server's IPv4 address
+server_ip=$(curl -4 ifconfig.co)
+
+# Display the URL to the user
+echo -e "Your files are available at the following URLs:"
+echo -e "Client2: http://$server_ip/openvpn-client-config.ovpn"
+echo -e "Client3: http://$server_ip/openvpn-client-config.ovpn"
