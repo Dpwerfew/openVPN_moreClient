@@ -165,7 +165,7 @@ key-direction 1
 cipher AES-256-CBC
 
 # Compression (enabled only if server allows it)
-#comp-lzo
+;comp-lzo
 
 # Verbosity level
 verb 3
