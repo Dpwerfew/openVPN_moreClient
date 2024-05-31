@@ -151,11 +151,8 @@ add_user() {
   cd /etc/openvpn/easy-rsa
   echo -e "Name_$USERNAME\n\n\n\n\n\n\n\n\n\n" | sudo ./easyrsa gen-req $USERNAME nopass
   echo -e "yes" | sudo ./easyrsa sign-req client $USERNAME
-  sudo cp /etc/openvpn/easy-rsa/pki/issued/$USERNAME.crt /etc/openvpn/certs/
-  sudo cp /etc/openvpn/easy-rsa/pki/private/$USERNAME.key /etc/openvpn/certs/
-  sudo cp /etc/openvpn/certs/ca.crt /etc/openvpn/certs/ta.key /etc/openvpn/certs/$USERNAME.ovpn
 
-  # Create client config file
+  # Create client config file with embedded certificates and keys
   cat <<EOF > /var/www/html/$USERNAME.ovpn
 client
 dev tun
@@ -165,17 +162,25 @@ resolv-retry infinite
 nobind
 persist-key
 persist-tun
-ca ca.crt
-cert $USERNAME.crt
-key $USERNAME.key
-tls-auth ta.key 1
+ca [inline]
+cert [inline]
+key [inline]
+tls-auth [inline] 1
 cipher AES-256-CBC
 verb 3
+<ca>
+$(cat /etc/openvpn/certs/ca.crt)
+</ca>
+<cert>
+$(cat /etc/openvpn/easy-rsa/pki/issued/$USERNAME.crt)
+</cert>
+<key>
+$(cat /etc/openvpn/easy-rsa/pki/private/$USERNAME.key)
+</key>
+<tls-auth>
+$(cat /etc/openvpn/certs/ta.key)
+</tls-auth>
 EOF
 
   echo "User $USERNAME added successfully. Configuration file: /var/www/html/$USERNAME.ovpn"
 }
-
-# Add new users
-add_user "client2"
-add_user "client3"
