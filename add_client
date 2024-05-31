@@ -6,30 +6,24 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-# Имя пользователя, переданное в качестве аргумента
 CLIENT_NAME=$1
 
-# Установка переменной окружения EASYRSA в текущую директорию EasyRSA
+# Переменная окружения EASYRSA
 export EASYRSA=/etc/openvpn/easy-rsa
-
-# Переход в директорию EasyRSA
 cd $EASYRSA
 
-# Генерация клиентского ключа и запроса сертификата с указанным именем
+# Генерация запроса на сертификат и ключ клиента
 echo -e "Name_$CLIENT_NAME\n\n\n\n\n\n\n\n\n\n" | sudo ./easyrsa gen-req $CLIENT_NAME nopass
-
-# Подписание запроса клиентского сертификата с ключом CA
 echo -e "yes" | sudo ./easyrsa sign-req client $CLIENT_NAME
 
-# Создание файла конфигурации для клиента
-CLIENT_CONFIG=/etc/openvpn/openvpn-client-config-$CLIENT_NAME.ovpn
-
-# Создание файла конфигурации на основе стандартного шаблона
+# Создание конфигурационного файла клиента
+CLIENT_CONFIG="/etc/openvpn/openvpn-client-config-$CLIENT_NAME.ovpn"
+server_ip=$(curl -4 ifconfig.co)
 cat <<EOF > $CLIENT_CONFIG
 client
 dev tun
 proto udp
-remote $(curl -4 ifconfig.co) 1194
+remote $server_ip 1194
 resolv-retry infinite
 nobind
 persist-key
@@ -54,11 +48,9 @@ $(cat /etc/openvpn/certs/ta.key)
 key-direction 1
 EOF
 
-# Перемещение файла конфигурации клиента OpenVPN в директорию Apache
+# Перемещение конфигурации клиента в директорию Apache
 sudo mv $CLIENT_CONFIG /var/www/html/
+sudo chmod 444 /var/www/html/$CLIENT_CONFIG
 
-# Изменение прав доступа к файлу конфигурации на только чтение
-sudo chmod 444 /var/www/html/openvpn-client-config-$CLIENT_NAME.ovpn
-
-# Отображение URL для пользователя
-echo -e "Your file is available at the following \e[32mURL: http://$(curl -4 ifconfig.co)/openvpn-client-config-$CLIENT_NAME.ovpn\e[0m"
+# Вывод URL для загрузки файла клиента
+echo -e "Ваш файл доступен по следующему URL: \e[32mhttp://$server_ip/$CLIENT_CONFIG\e[0m"
